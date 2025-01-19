@@ -63,7 +63,7 @@ if defined_patches:
     if st.button("Remove Selected Patch"):
         defined_patches.pop(remove_patch_index)
         st.session_state["user_defined_patches"] = defined_patches
-        st.experimental_rerun()
+
 
     # Metrics Calculation
     st.header("Landscape Metrics")
