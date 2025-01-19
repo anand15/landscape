@@ -18,30 +18,62 @@ st.sidebar.write(f"Total Landscape Area: {TOTAL_AREA} square meters")
 # Initialize session state for patches
 if "user_defined_patches" not in st.session_state:
     st.session_state["user_defined_patches"] = []
+if "guided_mode" not in st.session_state:
+    st.session_state["guided_mode"] = True
+if "temporal_landscapes" not in st.session_state:
+    st.session_state["temporal_landscapes"] = []  # To store landscapes over time
+if "comparison_landscapes" not in st.session_state:
+    st.session_state["comparison_landscapes"] = []  # For dynamic comparisons
 
-# Step 2: Landscape Building
+# Step 2: Guided Mode
+if st.session_state["guided_mode"]:
+    st.sidebar.subheader("Guided Mode Enabled")
+    st.sidebar.info("Guided mode provides step-by-step instructions to help you build and understand your landscape.")
+    if st.sidebar.button("Disable Guided Mode"):
+        st.session_state["guided_mode"] = False
+else:
+    st.sidebar.subheader("Guided Mode Disabled")
+    if st.sidebar.button("Enable Guided Mode"):
+        st.session_state["guided_mode"] = True
+
+# Step 3: Landscape Building
 st.header("Build Your Landscape")
 defined_patches = st.session_state["user_defined_patches"]
 total_defined_area = sum([p["Area"] for p in defined_patches])
 
 if total_defined_area < TOTAL_AREA:
+    if st.session_state["guided_mode"]:
+        st.markdown("### Step 1: Select Patch Type")
+        st.markdown("Choose the type of patch you want to add to the landscape. Each patch type represents a specific land cover or land use category.")
+    
     with st.form("patch_form"):
         patch_type = st.selectbox(
             "Select Patch Type:", 
             ["Forest", "Grassland", "Urban", "Water Body", "Wetland", "Agricultural", "Shrubland"]
         )
+
+        if st.session_state["guided_mode"]:
+            st.markdown("### Step 2: Define Patch Area")
+            st.markdown("Specify the size of the patch in square meters. The remaining area will be displayed to guide your choices.")
+
         patch_area = st.number_input(
             f"Enter Area for {patch_type} (remaining area: {TOTAL_AREA - total_defined_area:.2f} sq m):",
             min_value=0.0,
             max_value=float(TOTAL_AREA - total_defined_area),
             step=0.1,
         )
+
+        if st.session_state["guided_mode"]:
+            st.markdown("### Step 3: Set Shape Irregularity")
+            st.markdown("Adjust the shape irregularity of the patch. A value of 0 represents a perfect shape (e.g., circle), while a value of 1 represents a highly irregular shape.")
+
         shape_irregularity = st.slider(
             f"Set Shape Irregularity for {patch_type} (0: Perfect, 1: Highly Irregular):",
             min_value=0.0,
             max_value=1.0,
             step=0.1
         )
+
         add_patch = st.form_submit_button("Add Patch")
 
     if add_patch and patch_area > 0:
@@ -51,10 +83,11 @@ if total_defined_area < TOTAL_AREA:
             "Shape Irregularity": shape_irregularity
         })
         st.session_state["user_defined_patches"] = defined_patches
+
 else:
     st.warning("Total area defined has reached or exceeded the 100 sq m limit.")
 
-# Step 3: Display Defined Patches
+# Step 4: Display Defined Patches
 if defined_patches:
     st.subheader("Defined Patches")
     patches_df = pd.DataFrame(defined_patches)
@@ -68,6 +101,15 @@ if defined_patches:
 
     # Metrics Calculation
     st.header("Landscape Metrics")
+
+    if st.session_state["guided_mode"]:
+        st.markdown("### Metrics Explanation")
+        st.markdown("The following metrics provide insights into the composition and configuration of your landscape:")
+        st.markdown("- **Richness**: The number of unique patch types.")
+        st.markdown("- **Evenness**: How evenly distributed the patch types are.")
+        st.markdown("- **Diversity**: A composite measure of richness and evenness.")
+        st.markdown("- **Edge Length**: The total perimeter of patches.")
+        st.markdown("- **Core Area**: The interior area unaffected by edge effects.")
 
     total_patches = len(defined_patches)
     total_patch_area = sum(patches_df["Area"])
@@ -93,9 +135,21 @@ if defined_patches:
     st.write(f"**Evenness:** {evenness:.2f}")
     st.write(f"**Dominance:** {dominance:.2f}")
     st.write(f"**Diversity (Shannon Index):** {diversity:.2f}")
-    st.write(f"**Edge Lengths:** {edge_lengths.tolist()}")
-    st.write(f"**Shape Complexities:** {patches_df['Shape Complexity'].tolist()}")
-    st.write(f"**Core Areas:** {patches_df['Core Area'].tolist()}")
+
+    # Save Current Landscape for Comparison
+    if st.button("Save Current Landscape for Comparison"):
+        st.session_state["comparison_landscapes"].append(patches_df.copy())
+        st.success("Landscape saved for comparison!")
+
+    # Dynamic Comparison
+    if len(st.session_state["comparison_landscapes"]) > 1:
+        st.header("Dynamic Landscape Comparison")
+        st.markdown("Compare metrics and visualizations of multiple saved landscapes side by side.")
+
+        cols = st.columns(len(st.session_state["comparison_landscapes"]))
+        for i, (col, landscape) in enumerate(zip(cols, st.session_state["comparison_landscapes"])):
+            col.markdown(f"### Landscape {i + 1}")
+            col.dataframe(landscape)
 
     # Visualization
     st.header("Landscape Visualization")
