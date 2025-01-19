@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from scipy.stats import entropy
+import random
 
 # Initialize App
 st.title("Landscape Builder and Metrics Calculator")
