@@ -89,14 +89,14 @@ if defined_patches:
     st.write(f"**Dominance:** {dominance:.2f}")
     st.write(f"**Diversity (Shannon Index):** {diversity:.2f}")
 
-   # Visualization
+  # Visualization
     st.header("Landscape Visualization")
     fig, ax = plt.subplots(figsize=(8, 8))
-    ax.set_xlim(0, 10)
-    ax.set_ylim(0, 10)
-    ax.set_title("Landscape Visualization (100 sq m)")
-    ax.set_xlabel("X Axis (m)")
-    ax.set_ylabel("Y Axis (m)")
+    ax.set_xlim(0, 20)  # Increased visualization area
+    ax.set_ylim(0, 20)
+    ax.set_title("Landscape Visualization")
+    ax.set_xlabel("X Axis (arbitrary units)")
+    ax.set_ylabel("Y Axis (arbitrary units)")
 
     # Define Colors for Each Patch Type
     colors = {
@@ -109,12 +109,25 @@ if defined_patches:
         "Shrubland": "purple"
     }
 
-    # Place Patches Randomly
+    # Place Patches Randomly Without Overlap
+    placed_patches = []
+
     for _, patch in patches_df.iterrows():
         width = np.sqrt(patch["Area"] / TOTAL_AREA) * 10
         height = width * (1 + patch["Shape Irregularity"] * 0.5)
-        x_position = random.uniform(0 + width / 2, 10 - width / 2)
-        y_position = random.uniform(0 + height / 2, 10 - height / 2)
+
+        # Ensure no overlap
+        while True:
+            x_position = random.uniform(0 + width / 2, 20 - width / 2)
+            y_position = random.uniform(0 + height / 2, 20 - height / 2)
+            new_patch = plt.Rectangle(
+                (x_position - width / 2, y_position - height / 2), 
+                width, 
+                height
+            )
+            if not any(new_patch.get_bbox().overlaps(existing.get_bbox()) for existing in placed_patches):
+                break
+
         rect = plt.Rectangle(
             (x_position - width / 2, y_position - height / 2), 
             width, 
@@ -124,10 +137,12 @@ if defined_patches:
             label=f"{patch['Patch Type']} ({patch['Area']} sq m)"
         )
         ax.add_patch(rect)
+        placed_patches.append(rect)
 
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     ax.legend(by_label.values(), by_label.keys())
     st.pyplot(fig)
+
 # Additional Notes
-st.sidebar.info("You can define patches until the total area matches or is less than 100 sq m. Metrics and visualization will update accordingly. Use the 'Remove Selected Patch' option to adjust patches.")
+st.sidebar.info("You can define patches without constraint to a 100 sq m visualization area. Metrics and visualization will update accordingly. Use the 'Remove Selected Patch' option to adjust patches.")
