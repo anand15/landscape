@@ -1,5 +1,7 @@
 import streamlit as st
 import matplotlib.pyplot as plt
+from matplotlib.path import Path
+from matplotlib.patches import PathPatch
 import pandas as pd
 import numpy as np
 from scipy.stats import entropy
@@ -64,7 +66,6 @@ if defined_patches:
         defined_patches.pop(remove_patch_index)
         st.session_state["user_defined_patches"] = defined_patches
 
-
     # Metrics Calculation
     st.header("Landscape Metrics")
 
@@ -74,14 +75,6 @@ if defined_patches:
     evenness = entropy(proportions) / np.log(richness) if richness > 1 else 1
     dominance = 1 - evenness
     diversity = entropy(proportions)
-    radius_of_gyration = np.sqrt(patches_df["Area"] / np.pi)
-    edge_lengths = 2 * np.pi * radius_of_gyration
-    patches_df["Radius of Gyration"] = radius_of_gyration
-    patches_df["Edge Length"] = edge_lengths
-    patches_df["Shape Complexity"] = patches_df["Edge Length"] / patches_df["Area"]
-    buffer_distance = 0.1 * radius_of_gyration
-    core_area = np.maximum(0, patches_df["Area"] - 2 * np.pi * buffer_distance**2)
-    patches_df["Core Area"] = core_area
 
     st.write(patches_df)
     st.write(f"**Richness:** {richness}")
@@ -89,7 +82,7 @@ if defined_patches:
     st.write(f"**Dominance:** {dominance:.2f}")
     st.write(f"**Diversity (Shannon Index):** {diversity:.2f}")
 
-  # Visualization
+    # Visualization
     st.header("Landscape Visualization")
 
     def generate_irregular_shape(x_center, y_center, base_size, irregularity):
