@@ -89,7 +89,7 @@ if defined_patches:
     st.write(f"**Dominance:** {dominance:.2f}")
     st.write(f"**Diversity (Shannon Index):** {diversity:.2f}")
 
-  # Visualization
+   # Visualization
     st.header("Landscape Visualization")
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.set_xlim(0, 20)  # Increased visualization area
@@ -134,14 +134,14 @@ if defined_patches:
             height, 
             color=colors[patch["Patch Type"]], 
             alpha=0.7, 
-            label=f"{patch['Patch Type']} ({patch['Area']} sq m)"
+            label=f"{patch['Patch Type']}\nArea: {patch['Area']} sq m\nIrregularity: {patch['Shape Irregularity']:.2f}"
         )
         ax.add_patch(rect)
         placed_patches.append(rect)
 
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
-    ax.legend(by_label.values(), by_label.keys())
+    ax.legend(by_label.values(), by_label.keys(), loc="upper right", fontsize="small")
     st.pyplot(fig)
 
 # Additional Notes
