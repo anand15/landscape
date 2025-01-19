@@ -88,7 +88,7 @@ if defined_patches:
     st.write(f"**Dominance:** {dominance:.2f}")
     st.write(f"**Diversity (Shannon Index):** {diversity:.2f}")
 
-    # Visualization
+   # Visualization
     st.header("Landscape Visualization")
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.set_xlim(0, 10)
@@ -97,22 +97,36 @@ if defined_patches:
     ax.set_xlabel("X Axis (m)")
     ax.set_ylabel("Y Axis (m)")
 
-    current_x, current_y = 0, 0
+    # Define Colors for Each Patch Type
+    colors = {
+        "Forest": "green",
+        "Grassland": "yellow",
+        "Urban": "gray",
+        "Water Body": "blue",
+        "Wetland": "brown",
+        "Agricultural": "orange",
+        "Shrubland": "purple"
+    }
+
+    # Place Patches Randomly
     for _, patch in patches_df.iterrows():
         width = np.sqrt(patch["Area"] / TOTAL_AREA) * 10
-        height = width * (1 + patch["Shape Irregularity"] * 0.5)  # Adjusted irregularity
-        if current_x + width > 10:
-            current_x = 0
-            current_y += height
-        if current_y + height > 10:
-            st.warning("Visualization exceeds 100 sq m box. Adjust patch areas.")
-            break
-        rect = plt.Rectangle((current_x, current_y), width, height, label=f"{patch['Patch Type']} ({patch['Area']} sq m)")
+        height = width * (1 + patch["Shape Irregularity"] * 0.5)
+        x_position = random.uniform(0 + width / 2, 10 - width / 2)
+        y_position = random.uniform(0 + height / 2, 10 - height / 2)
+        rect = plt.Rectangle(
+            (x_position - width / 2, y_position - height / 2), 
+            width, 
+            height, 
+            color=colors[patch["Patch Type"]], 
+            alpha=0.7, 
+            label=f"{patch['Patch Type']} ({patch['Area']} sq m)"
+        )
         ax.add_patch(rect)
-        current_x += width
 
-    ax.legend()
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys())
     st.pyplot(fig)
-
 # Additional Notes
 st.sidebar.info("You can define patches until the total area matches or is less than 100 sq m. Metrics and visualization will update accordingly. Use the 'Remove Selected Patch' option to adjust patches.")
