@@ -89,8 +89,19 @@ if defined_patches:
     st.write(f"**Dominance:** {dominance:.2f}")
     st.write(f"**Diversity (Shannon Index):** {diversity:.2f}")
 
-   # Visualization
+  # Visualization
     st.header("Landscape Visualization")
+
+    def generate_irregular_shape(x_center, y_center, base_size, irregularity):
+        angles = np.linspace(0, 2 * np.pi, 20)  # Divide shape into 20 segments
+        radii = base_size * (1 + irregularity * (np.random.random(len(angles)) - 0.5))
+        x_points = x_center + radii * np.cos(angles)
+        y_points = y_center + radii * np.sin(angles)
+        vertices = np.column_stack([x_points, y_points])
+        vertices = np.vstack([vertices, vertices[0]])  # Close the shape
+        codes = [Path.MOVETO] + [Path.LINETO] * (len(vertices) - 2) + [Path.CLOSEPOLY]
+        return Path(vertices, codes)
+
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.set_xlim(0, 20)  # Increased visualization area
     ax.set_ylim(0, 20)
@@ -98,7 +109,6 @@ if defined_patches:
     ax.set_xlabel("X Axis (arbitrary units)")
     ax.set_ylabel("Y Axis (arbitrary units)")
 
-    # Define Colors for Each Patch Type
     colors = {
         "Forest": "green",
         "Grassland": "yellow",
@@ -109,39 +119,21 @@ if defined_patches:
         "Shrubland": "purple"
     }
 
-    # Place Patches Randomly Without Overlap
     placed_patches = []
 
     for _, patch in patches_df.iterrows():
-        width = np.sqrt(patch["Area"] / TOTAL_AREA) * 10
-        height = width * (1 + patch["Shape Irregularity"] * 0.5)
-
-        # Ensure no overlap
+        base_size = np.sqrt(patch["Area"] / TOTAL_AREA) * 10
+        irregularity = patch["Shape Irregularity"]
         while True:
-            x_position = random.uniform(0 + width / 2, 20 - width / 2)
-            y_position = random.uniform(0 + height / 2, 20 - height / 2)
-            new_patch = plt.Rectangle(
-                (x_position - width / 2, y_position - height / 2), 
-                width, 
-                height
-            )
-            if not any(new_patch.get_bbox().overlaps(existing.get_bbox()) for existing in placed_patches):
+            x_center = random.uniform(base_size, 20 - base_size)
+            y_center = random.uniform(base_size, 20 - base_size)
+            path = generate_irregular_shape(x_center, y_center, base_size, irregularity)
+            patch_shape = PathPatch(path, facecolor=colors[patch["Patch Type"]], alpha=0.7)
+            if not any(patch_shape.get_path().intersects_path(existing.get_path()) for existing in placed_patches):
                 break
+        ax.add_patch(patch_shape)
+        placed_patches.append(patch_shape)
 
-        rect = plt.Rectangle(
-            (x_position - width / 2, y_position - height / 2), 
-            width, 
-            height, 
-            color=colors[patch["Patch Type"]], 
-            alpha=0.7, 
-            label=f"{patch['Patch Type']}\nArea: {patch['Area']} sq m\nIrregularity: {patch['Shape Irregularity']:.2f}"
-        )
-        ax.add_patch(rect)
-        placed_patches.append(rect)
-
-    handles, labels = ax.get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
-    ax.legend(by_label.values(), by_label.keys(), loc="upper right", fontsize="small")
     st.pyplot(fig)
 
 # Additional Notes
