@@ -69,18 +69,33 @@ if defined_patches:
     # Metrics Calculation
     st.header("Landscape Metrics")
 
+    total_patches = len(defined_patches)
+    total_patch_area = sum(patches_df["Area"])
     patches_df["Proportional Abundance"] = patches_df["Area"] / TOTAL_AREA
     richness = patches_df["Patch Type"].nunique()
     proportions = patches_df["Proportional Abundance"]
     evenness = entropy(proportions) / np.log(richness) if richness > 1 else 1
     dominance = 1 - evenness
     diversity = entropy(proportions)
+    radius_of_gyration = np.sqrt(patches_df["Area"] / np.pi)
+    edge_lengths = 2 * np.pi * radius_of_gyration
+    patches_df["Radius of Gyration"] = radius_of_gyration
+    patches_df["Edge Length"] = edge_lengths
+    patches_df["Shape Complexity"] = patches_df["Edge Length"] / patches_df["Area"]
+    buffer_distance = 0.1 * radius_of_gyration
+    core_area = np.maximum(0, patches_df["Area"] - 2 * np.pi * buffer_distance**2)
+    patches_df["Core Area"] = core_area
 
+    st.write(f"**Total Number of Patches:** {total_patches}")
+    st.write(f"**Total Area of Patches:** {total_patch_area:.2f} sq m")
     st.write(patches_df)
     st.write(f"**Richness:** {richness}")
     st.write(f"**Evenness:** {evenness:.2f}")
     st.write(f"**Dominance:** {dominance:.2f}")
     st.write(f"**Diversity (Shannon Index):** {diversity:.2f}")
+    st.write(f"**Edge Lengths:** {edge_lengths.tolist()}")
+    st.write(f"**Shape Complexities:** {patches_df['Shape Complexity'].tolist()}")
+    st.write(f"**Core Areas:** {patches_df['Core Area'].tolist()}")
 
     # Visualization
     st.header("Landscape Visualization")
