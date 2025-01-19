@@ -23,12 +23,14 @@ total_defined_area = 0
 while total_defined_area < TOTAL_AREA:
     st.subheader("Define a New Patch")
     patch_type = st.selectbox("Select Patch Type:", available_patch_types, key=f"patch_type_{len(user_defined_patches)}")
-    patch_area = st.number_input(
-        f"Enter Area for {patch_type} (remaining area: {TOTAL_AREA - total_defined_area:.2f} sq m):",
-        min_value=0.0,
-        max_value=TOTAL_AREA - total_defined_area,
-        step=0.1,
-        key=f"patch_area_{len(user_defined_patches)}"
+patch_area = st.number_input(
+    f"Enter Area for {patch_type} (remaining area: {TOTAL_AREA - total_defined_area:.2f} sq m):",
+    min_value=0.0,  # Ensure float
+    max_value=float(TOTAL_AREA - total_defined_area),  # Convert to float
+    step=0.1,  # Float step
+    key=f"patch_area_{len(user_defined_patches)}"
+)
+
     )
     shape_irregularity = st.slider(
         f"Set Shape Irregularity for {patch_type} (0: Perfect, 1: Highly Irregular):",
