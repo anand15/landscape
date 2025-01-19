@@ -2,118 +2,123 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from scipy.stats import entropy
 
 # Initialize App
-st.title("Landscape Exploration App")
+st.title("Landscape Builder and Metrics Calculator")
 st.sidebar.title("Landscape Settings")
 
 # Step 1: Total Area of Landscape
 TOTAL_AREA = 100  # Total area in square meters
 st.sidebar.write(f"Total Landscape Area: {TOTAL_AREA} square meters")
 
-# Step 2: Number of Patch Types and Numbers
-num_patch_types = st.sidebar.number_input("Enter the number of patch types:", min_value=1, max_value=10, value=3, step=1)
-st.sidebar.write(f"You have selected {num_patch_types} patch types.")
+# Step 2: Initialize Landscape Building
+st.header("Build Your Landscape")
 
-# Step 3: Patch Type Selection
+# Define patch attributes
 available_patch_types = ["Forest", "Grassland", "Urban", "Water Body", "Wetland", "Agricultural", "Shrubland"]
-selected_patch_types = st.sidebar.multiselect(
-    "Select patch types for the landscape:", available_patch_types, available_patch_types[:num_patch_types]
-)
+user_defined_patches = []
+total_defined_area = 0
 
-# Validate Patch Types Selection
-if len(selected_patch_types) < num_patch_types:
-    st.sidebar.warning("You selected fewer patch types than specified. Default types will be used.")
-    selected_patch_types = available_patch_types[:num_patch_types]
+# User Input: Add Patches
+while total_defined_area < TOTAL_AREA:
+    st.subheader("Define a New Patch")
+    patch_type = st.selectbox("Select Patch Type:", available_patch_types, key=f"patch_type_{len(user_defined_patches)}")
+    patch_area = st.number_input(
+        f"Enter Area for {patch_type} (remaining area: {TOTAL_AREA - total_defined_area:.2f} sq m):",
+        min_value=0.0,
+        max_value=TOTAL_AREA - total_defined_area,
+        step=0.1,
+        key=f"patch_area_{len(user_defined_patches)}"
+    )
+    shape_irregularity = st.slider(
+        f"Set Shape Irregularity for {patch_type} (0: Perfect, 1: Highly Irregular):",
+        min_value=0.0,
+        max_value=1.0,
+        step=0.1,
+        key=f"shape_irregularity_{len(user_defined_patches)}"
+    )
 
-# Step 4: Shape Adjustment Slider
-shape_slider = st.sidebar.slider("Adjust Patch Shape: Perfect (0) to Irregular (1):", min_value=0.0, max_value=1.0, value=0.5, step=0.1)
-st.sidebar.write(f"Shape irregularity: {shape_slider}")
+    # Add Patch to Landscape
+    if st.button("Add Patch", key=f"add_patch_{len(user_defined_patches)}") and patch_area > 0:
+        user_defined_patches.append({
+            "Patch Type": patch_type,
+            "Area": patch_area,
+            "Shape Irregularity": shape_irregularity
+        })
+        total_defined_area += patch_area
 
-# Step 5: Calculate Landscape Metrics
-st.header("Landscape Metrics")
+# Display Defined Patches
+if user_defined_patches:
+    st.subheader("Defined Patches")
+    patches_df = pd.DataFrame(user_defined_patches)
+    st.write(patches_df)
 
-# Generate random patch sizes and configurations
-patch_areas = np.random.dirichlet(np.ones(len(selected_patch_types))) * TOTAL_AREA
+# Step 3: Calculate Metrics
+if total_defined_area > 0:
+    st.header("Landscape Metrics")
 
-metrics = {
-    "Patch Type": selected_patch_types,
-    "Area (sq meters)": patch_areas,
-    "Proportional Abundance": patch_areas / TOTAL_AREA,
-    "Shape Irregularity": [shape_slider] * len(selected_patch_types),
-    "Edge-to-Core Ratio": [1 + shape_slider * np.random.random() for _ in selected_patch_types]
-}
-metrics_df = pd.DataFrame(metrics)
+    # Proportional Abundance
+    patches_df["Proportional Abundance"] = patches_df["Area"] / total_defined_area
 
-# Calculate Richness
-richness = len(selected_patch_types)
+    # Richness
+    richness = patches_df["Patch Type"].nunique()
 
-# Calculate Evenness and Dominance
-proportions = metrics_df["Proportional Abundance"]
-evenness = entropy(proportions) / np.log(richness)
-dominance = 1 - evenness
+    # Evenness and Dominance
+    proportions = patches_df["Proportional Abundance"]
+    evenness = entropy(proportions) / np.log(richness) if richness > 1 else 1
+    dominance = 1 - evenness
 
-# Calculate Diversity (Shannon Diversity Index)
-diversity = entropy(proportions)
+    # Diversity (Shannon Index)
+    diversity = entropy(proportions)
 
-# Display Metrics
-st.write(metrics_df)
+    # Patch Area and Edge
+    radius_of_gyration = np.sqrt(patches_df["Area"] / np.pi)
+    edge_lengths = 2 * np.pi * radius_of_gyration
+    patches_df["Radius of Gyration"] = radius_of_gyration
+    patches_df["Edge Length"] = edge_lengths
 
-# Display Summary Metrics
-st.write(f"**Richness:** {richness}")
-st.write(f"**Evenness:** {evenness:.2f}")
-st.write(f"**Dominance:** {dominance:.2f}")
-st.write(f"**Diversity (Shannon Index):** {diversity:.2f}")
+    # Shape Complexity
+    patches_df["Shape Complexity"] = patches_df["Edge Length"] / patches_df["Area"]
 
-# Configuration Metrics
-st.write("**Configuration Metrics:**")
-patch_areas_list = metrics_df["Area (sq meters)"]
+    # Core Area
+    buffer_distance = 0.1 * radius_of_gyration
+    core_area = np.maximum(0, patches_df["Area"] - 2 * np.pi * buffer_distance**2)
+    patches_df["Core Area"] = core_area
 
-# Patch Area and Edge
-radius_of_gyration = np.sqrt(patch_areas_list / np.pi)
-edge_lengths = [2 * np.pi * r for r in radius_of_gyration]
-metrics_df["Radius of Gyration"] = radius_of_gyration
-metrics_df["Edge Length"] = edge_lengths
+    # Display Metrics
+    st.write(patches_df)
+    st.write(f"**Richness:** {richness}")
+    st.write(f"**Evenness:** {evenness:.2f}")
+    st.write(f"**Dominance:** {dominance:.2f}")
+    st.write(f"**Diversity (Shannon Index):** {diversity:.2f}")
 
-for i, patch_type in enumerate(selected_patch_types):
-    st.write(f"- {patch_type}: Radius of Gyration: {radius_of_gyration[i]:.2f}, Edge Length: {edge_lengths[i]:.2f}")
+# Step 4: Visualization
+if total_defined_area > 0:
+    st.header("Landscape Visualization")
 
-# Patch Shape Complexity
-shape_complexity = metrics_df["Edge Length"] / metrics_df["Area (sq meters)"]
-metrics_df["Shape Complexity"] = shape_complexity
+    # Create Visualization Box
+    fig, ax = plt.subplots(figsize=(8, 8))
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 10)
+    ax.set_title("Landscape Visualization (100 sq m)")
+    ax.set_xlabel("X Axis (m)")
+    ax.set_ylabel("Y Axis (m)")
 
-# Core Area
-buffer_distance = 0.1 * radius_of_gyration
-core_area = np.maximum(0, patch_areas_list - 2 * np.pi * buffer_distance**2)
-metrics_df["Core Area"] = core_area
+    # Place Patches
+    current_x = 0
+    current_y = 0
+    for index, patch in patches_df.iterrows():
+        width = np.sqrt(patch["Area"] / TOTAL_AREA) * 10
+        height = width * (1 + patch["Shape Irregularity"] * np.random.random())
+        rect = plt.Rectangle((current_x, current_y), width, height, label=f"{patch['Patch Type']} ({patch['Area']} sq m)")
+        ax.add_patch(rect)
+        current_x += width
+        if current_x >= 10:
+            current_x = 0
+            current_y += height
 
-# Visualization
-st.header("Patch Visualization")
-
-# Generate Visualization
-fig, ax = plt.subplots(figsize=(6, 6))
-
-# Assign random positions to patches in a grid
-x_positions = np.random.uniform(0, 10, len(selected_patch_types))
-y_positions = np.random.uniform(0, 10, len(selected_patch_types))
-
-for i, patch_type in enumerate(selected_patch_types):
-    size = metrics_df["Area (sq meters)"][i] / TOTAL_AREA * 100
-    ax.scatter(x_positions[i], y_positions[i], s=size * 20, label=f"{patch_type} ({size:.1f}%)")
-
-ax.legend()
-ax.set_title("Landscape Patch Visualization")
-ax.set_xlim(0, 10)
-ax.set_ylim(0, 10)
-ax.set_xlabel("X Position")
-ax.set_ylabel("Y Position")
-
-st.pyplot(fig)
-
-# Display Metrics Table
-st.subheader("Complete Metrics Table")
-st.dataframe(metrics_df)
+    ax.legend()
+    st.pyplot(fig)
 
 # Additional Notes
-st.sidebar.info("You can adjust the settings in the sidebar to customize the landscape visualization and metrics.")
+st.sidebar.info("You can define patches until the total area matches or is less than 100 sq m. Metrics and visualization will update accordingly.")
