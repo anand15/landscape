@@ -57,6 +57,13 @@ if defined_patches:
     patches_df = pd.DataFrame(defined_patches)
     st.write(patches_df)
 
+    # Option to remove patches
+    remove_patch_index = st.selectbox("Select a patch to remove:", options=range(len(defined_patches)), format_func=lambda x: f"{defined_patches[x]['Patch Type']} ({defined_patches[x]['Area']} sq m)")
+    if st.button("Remove Selected Patch"):
+        defined_patches.pop(remove_patch_index)
+        st.session_state["user_defined_patches"] = defined_patches
+        st.experimental_rerun()
+
     # Metrics Calculation
     st.header("Landscape Metrics")
 
@@ -93,16 +100,19 @@ if defined_patches:
     current_x, current_y = 0, 0
     for _, patch in patches_df.iterrows():
         width = np.sqrt(patch["Area"] / TOTAL_AREA) * 10
-        height = width * (1 + patch["Shape Irregularity"] * np.random.random())
+        height = width * (1 + patch["Shape Irregularity"] * 0.5)  # Adjusted irregularity
+        if current_x + width > 10:
+            current_x = 0
+            current_y += height
+        if current_y + height > 10:
+            st.warning("Visualization exceeds 100 sq m box. Adjust patch areas.")
+            break
         rect = plt.Rectangle((current_x, current_y), width, height, label=f"{patch['Patch Type']} ({patch['Area']} sq m)")
         ax.add_patch(rect)
         current_x += width
-        if current_x >= 10:
-            current_x = 0
-            current_y += height
 
     ax.legend()
     st.pyplot(fig)
 
 # Additional Notes
-st.sidebar.info("You can define patches until the total area matches or is less than 100 sq m. Metrics and visualization will update accordingly.")
+st.sidebar.info("You can define patches until the total area matches or is less than 100 sq m. Metrics and visualization will update accordingly. Use the 'Remove Selected Patch' option to adjust patches.")
